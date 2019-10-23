@@ -78,7 +78,8 @@
 
 
     - name: "does docker override conf exist?"
-      stat: path="/etc/systemd/system/docker.service.d/override.conf"
+      stat:
+        path: "/etc/systemd/system/docker.service.d/override.conf"
       register: docker_override_conf
 
     - name: "move /etc/systemd/system/docker.service.d/override.conf to .old"
