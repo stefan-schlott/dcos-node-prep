@@ -1,0 +1,28 @@
+- hosts: "{{ host_group }}"
+  vars:
+    yum_mirror_base_url: "http://{{ hostvars[groups['bootstraps'][0]]['ansible_default_ipv4']['address'] }}:8085"
+  remote_user: centos
+  become: true
+  tasks:
+    - name: "make sure old_repos sub-folder exists"
+      file:
+        path: "/etc/yum.repos.d/old_repos"
+        state: directory
+
+    - name: "are repos configured"
+      stat: path="/etc/yum.repos.d/*.repo"
+      register: repos
+
+    - name: "move .repo files to old repos"
+      shell: "mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/old_repos"
+      when: repos.stat.exists
+
+    - name: "write out local /etc/yum.repos.d/local-repos.repo"
+      template:
+        src: "templates/local-repos.repo.j2"
+        dest: "/etc/yum.repos.d/local-repos.repo"
+        mode: 0644
+
+    - name: "clear yum cache and show yum repolist"
+      shell: "{{ item }}"
+      loop: ["yum clean all","yum repolist -v"]

@@ -1,0 +1,132 @@
+- hosts: "{{ host_group }}"
+  vars:
+    docker_ce_server_version: "18.09.2-3.el7"
+    docker_ce_cli_version: "18.09.2-3.el7"
+    containerd_version: "1.2.5-3.1.el7"
+  remote_user: centos
+  become: true
+  tasks:
+    - name: "allow yum to install docker*"
+      copy:
+        dest: "/etc/yum.conf"
+        content: |
+          [main]
+          releasever='7.5.1804'
+          cachedir=/var/cache/yum/$basearch/$releasever
+          keepcache=0
+          debuglevel=2
+          logfile=/var/log/yum.log
+          exactarch=1
+          obsoletes=1
+          gpgcheck=1
+          plugins=1
+          installonly_limit=5
+          bugtracker_url=http://bugs.centos.org/set_project.php?project_id=23&ref=http://bugs.centos.org/bug_report_page.php?category=yum
+          distroverpkg=centos-release
+          #  This is the default, if you make this bigger yum won't see if the metadata
+          # is newer on the remote and so you'll "gain" the bandwidth of not having to
+          # download the new metadata and "pay" for it by yum not having correct
+          # information.
+          #  It is esp. important, to have correct metadata, for distributions like
+          # Fedora which don't keep old packages around. If you don't like this checking
+          # interupting your command line usage, it's much better to have something
+          # manually check the metadata once an hour (yum-updatesd will do this).
+          # metadata_expire=90m
+          # PUT YOUR REPOS HERE OR IN separate files named file.repo
+          # in /etc/yum.repos.d
+          ip_resolve=4
+          timeout=3
+          retries=2
+          exclude=kernel* centos* initscripts* ibutils-libs*
+
+    - name: "stop docker, if running"
+      systemd:
+        name: docker
+        state: stopped
+
+    - name: "remove old docker packages"
+      yum:
+        name:
+          - "docker"
+          - "docker-client"
+          - "docker-client-latest"
+          - "docker-common"
+          - "docker-latest"
+          - "docker-latest-logrotate"
+          - "docker-logrotate"
+          - "docker-engine"
+          - "docker-engine-selinux"
+        state: absent
+
+    - name: "install wanted docker packages"
+      yum:
+        name:
+          - "docker-ce-{{ docker_ce_server_version }}"
+          - "docker-ce-cli-{{ docker_ce_cli_version }}"
+          - "containerd.io-{{ containerd_version }}"
+        state: present
+
+    - name: "write Docker daemon.json"
+      copy:
+        dest: "/etc/docker/daemon.json"
+        content: |
+          {
+            "storage-driver": "overlay2",
+            "data-root": "/var/lib/mesos/docker",
+            "insecure-registries": ["registry.mesos.local:5000", "master.mesos:5000"]
+          }
+
+
+    - name: "does docker override conf exist?"
+      stat: path="/etc/systemd/system/docker.service.d/override.conf"
+      register: docker_override_conf
+
+    - name: "move /etc/systemd/system/docker.service.d/override.conf to .old"
+      shell: "mv /etc/systemd/system/docker.service.d/override.conf /etc/systemd/system/docker.service.d/override.conf.old"
+      when: docker_override_conf.stat.exists
+
+    - name: "reload docker systemd config"
+      systemd:
+        name: docker
+        state: reloaded
+
+    - name: "start docker, if not running"
+      systemd:
+        name: docker
+        state: restarted
+
+    - name: "output docker info"
+      command: "docker info"
+
+    - name: "disallow yum to install docker*"
+      copy:
+        dest: "/etc/yum.conf"
+        content: |
+          [main]
+          releasever='7.5.1804'
+          cachedir=/var/cache/yum/$basearch/$releasever
+          keepcache=0
+          debuglevel=2
+          logfile=/var/log/yum.log
+          exactarch=1
+          obsoletes=1
+          gpgcheck=1
+          plugins=1
+          installonly_limit=5
+          bugtracker_url=http://bugs.centos.org/set_project.php?project_id=23&ref=http://bugs.centos.org/bug_report_page.php?category=yum
+          distroverpkg=centos-release
+          #  This is the default, if you make this bigger yum won't see if the metadata
+          # is newer on the remote and so you'll "gain" the bandwidth of not having to
+          # download the new metadata and "pay" for it by yum not having correct
+          # information.
+          #  It is esp. important, to have correct metadata, for distributions like
+          # Fedora which don't keep old packages around. If you don't like this checking
+          # interupting your command line usage, it's much better to have something
+          # manually check the metadata once an hour (yum-updatesd will do this).
+          # metadata_expire=90m
+          # PUT YOUR REPOS HERE OR IN separate files named file.repo
+          # in /etc/yum.repos.d
+          ip_resolve=4
+          timeout=3
+          retries=2
+          exclude=kernel* centos* initscripts* ibutils-libs* docker*
