@@ -1,7 +1,10 @@
+# Gathering facts from all hosts
+- hosts: "all"
+
 - hosts: "{{ host_group }}"
   vars:
     yum_mirror_base_url: "http://{{ hostvars[groups['bootstraps'][0]]['ansible_default_ipv4']['address'] }}:8085"
-  remote_user: centos
+  #remote_user: centos
   become: true
   tasks:
     - name: "install yum.conf"
@@ -36,20 +39,21 @@
           timeout=3
           retries=2
           exclude=kernel* centos* initscripts* ibutils-libs* docker*
-          
+
     - name: "make sure old_repos sub-folder exists"
       file:
         path: "/etc/yum.repos.d/old_repos"
         state: directory
 
     - name: "are repos configured"
-      stat:
-        path: "/etc/yum.repos.d/*.repo"
-      register: repos
+      find:
+        paths: "/etc/yum.repos.d/"
+        patterns: "*.repo"
+      register: repos_configured
 
     - name: "move .repo files to old repos"
       shell: "mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/old_repos"
-      when: repos.stat.exists
+      when: (repos_configured.files is defined) and (repos_configured.files|length>0)
 
     - name: "write out local /etc/yum.repos.d/local-repos.repo"
       template:
