@@ -3,7 +3,7 @@
     docker_ce_server_version: "18.09.2-3.el7"
     docker_ce_cli_version: "18.09.2-3.el7"
     containerd_version: "1.2.5-3.1.el7"
-  remote_user: centos
+  #remote_user: centos
   become: true
   tasks:
     - name: "allow yum to install docker*"
@@ -85,6 +85,10 @@
     - name: "move /etc/systemd/system/docker.service.d/override.conf to .old"
       shell: "mv /etc/systemd/system/docker.service.d/override.conf /etc/systemd/system/docker.service.d/override.conf.old"
       when: docker_override_conf.stat.exists
+
+    - name: "reload systemd"
+      systemd:
+        daemon_reload: yes
 
     - name: "reload docker systemd config"
       systemd:
