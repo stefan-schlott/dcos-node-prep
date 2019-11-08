@@ -98,6 +98,7 @@
     - name: "start docker, if not running"
       systemd:
         name: docker
+        enabled: yes
         state: restarted
 
     - name: "output docker info"
