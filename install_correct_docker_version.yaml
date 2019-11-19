@@ -73,7 +73,8 @@
           {
             "storage-driver": "overlay2",
             "data-root": "/var/lib/mesos/docker",
-            "insecure-registries": ["registry.mesos.local:5000", "master.mesos:5000"]
+            "insecure-registries": ["registry.mesos.local:5000", "master.mesos:5000"],
+            "log-driver":"journald"
           }
 
 
