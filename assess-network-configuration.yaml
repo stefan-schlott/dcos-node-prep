@@ -1,0 +1,127 @@
+# Gathering facts from all hosts
+- hosts: "{{ host_group }}"
+  tasks:
+    - name: "get NIC used by DC/OS"
+      shell: netstat -ie | grep -B1 $(/opt/mesosphere/bin/detect_ip) | head -n1 | awk '{print $1}' | cut -d ":" -f 1
+      register: dcos_network_card
+
+    - name: "store facts for all hosts"
+      set_fact:
+        dcos_nic: "{{ dcos_network_card.stdout }}"
+        download_folder: "{{ download_folder }}"
+
+
+# Prepare the local download path
+- hosts: "localhost"
+  connection: local
+  gather_facts: no
+  become: false
+  tasks:
+    - name:
+      file:
+        path: "{{ download_folder }}"
+        state: directory
+
+
+
+# generate the remote data
+- hosts: "{{ host_group }}"
+  vars:
+    dump_file: "/tmp/network-assessment-upgrades-{{ inventory_hostname }}.txt"
+  become: true
+  tasks:
+    - name: "create temp file"
+      copy:
+        content: ""
+        dest: "{{ dump_file }}"
+
+    - name: "ethtool assessment"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# ETHTOOL SETTINGS ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nethtool -g {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -g {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nethtool -c {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -c {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nethtool -a {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -a {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nethtool -k {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -k {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nethtool -l {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -l {{ dcos_nic }} >> {{ dump_file }}"
+
+    - name: "ifconfig output"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# IFCONFIG SETTINGS ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nifconfig {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ifconfig {{ dcos_nic }} >> {{ dump_file }}"
+
+    - name: "sysctl -a output"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# SYSCTL SETTINGS ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nsysctl -a: \n' >> {{ dump_file }}"
+        - "sysctl -a >> {{ dump_file }}"
+
+    - name: "sysctl config files"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# SYSCTL CONFIG FILES ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\n/etc/systctl.conf: \n' >> {{ dump_file }}"
+        - "cat /etc/sysctl.conf >> {{ dump_file }}"
+        - "echo -n '\nfiles in /etc/systctl.d: \n' >> {{ dump_file }}"
+        - "ls /etc/sysctl.d/* >> {{ dump_file }}"
+        - "echo -n '\ncontent of files in /etc/sysctl.d/*: \n' >> {{ dump_file }}"
+        - "cat /etc/sysctl.d/* >> {{ dump_file }}"
+
+
+    - name: "netstat output"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# NETSTAT STATISTICS ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nnetstat -s: \n' >> {{ dump_file }}"
+        - "netstat -s >> {{ dump_file }}"
+        - "echo -n '\nnetstat -sn | egrep prune|collap: \n' >> {{ dump_file }}"
+        - "netstat -sn | egrep 'prune|collap' >> {{ dump_file }}"
+
+    - name: "/proc/net"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# /proc/net ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\n/proc/net/softnet_stat: \n' >> {{ dump_file }}"
+        - "cat /proc/net/softnet_stat >> {{ dump_file }}"
+        - "echo -n '\ncat /proc/interrupts | grep <interface_name>: \n' >> {{ dump_file }}"
+        - "cat /proc/interrupts | grep {{ dcos_nic }} >> {{ dump_file }}"
+
+    - name: "check if tuned is running"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# check for tuned ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nsystemctl status tuned: \n' >> {{ dump_file }}"
+        - "systemctl status tuned >> {{ dump_file }}"
+
+    - name: "check CPU powerstate"
+      shell: "{{ item }}"
+      ignore_errors: true
+      loop:
+        - "echo -n '\n ############# CPU Powerstate ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\ncat /sys/module/intel_idle/parameters/max_cstate: \n' >> {{ dump_file }}"
+        - "cat /sys/module/intel_idle/parameters/max_cstate >> {{ dump_file }}"
+
+
+    - name: "fetching the gathered data"
+      fetch:
+        src: "{{ dump_file }}"
+        dest: "{{ download_folder }}"
+
+
+
+
