@@ -39,6 +39,14 @@
           retries=2
           exclude=kernel* centos* initscripts* ibutils-libs*
 
+    - name: stop all docker containers
+      shell: docker stop $(docker ps -q)
+      ignore_errors: true
+
+    - name: check docker ps
+      shell: docker ps
+      ignore_errors: true
+
     - name: "stop docker, if running"
       systemd:
         name: docker
