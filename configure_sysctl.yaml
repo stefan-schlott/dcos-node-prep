@@ -1,0 +1,22 @@
+# Gathering facts from all hosts
+- hosts: "all"
+
+- hosts: "{{ host_group }}"
+  vars:
+  become: true
+  tasks:
+
+    - name: "backup current /etc/systctl.conf"
+      copy:
+       src: "/etc/sysctl.conf"
+       dest: "/etc/sysctl.conf-{{ansible_date_time.iso8601 }}"
+       remote_src: yes
+
+    - name: "configure the new sysctl.conf"
+      template:
+        src: "templates/sysctl.conf.j2"
+        dest: "/etc/sysctl.conf"
+        mode: 0644
+
+    - name: "apply sysctl settings with sysctl -p"
+      shell: "sysctl -p"

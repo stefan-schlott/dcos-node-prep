@@ -83,3 +83,8 @@ Post-Checks
 # Network assessment
 
 `ansible-playbook assess-network-configuration.yaml -b -e "host_group=agents_private,agents_public,masters download_folder=/tmp/network-assessment-20191204"`
+
+# Configure sysctl.conf
+
+
+`ansible-playbook configure_sysctl.yaml -b -e "host_group=agents_private"`
