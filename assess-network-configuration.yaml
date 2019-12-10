@@ -22,8 +22,6 @@
         path: "{{ download_folder }}"
         state: directory
 
-
-
 # generate the remote data
 - hosts: "{{ host_group }}"
   vars:
@@ -40,6 +38,10 @@
       ignore_errors: true
       loop:
         - "echo -n '\n ############# ETHTOOL SETTINGS ##################### \n' >> {{ dump_file }}"
+        - "echo -n '\nethtool -i {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -i {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nethtool -S {{ dcos_nic }} : \n' >> {{ dump_file }}"
+        - "ethtool -S {{ dcos_nic }} >> {{ dump_file }}"
         - "echo -n '\nethtool -g {{ dcos_nic }} : \n' >> {{ dump_file }}"
         - "ethtool -g {{ dcos_nic }} >> {{ dump_file }}"
         - "echo -n '\nethtool -c {{ dcos_nic }} : \n' >> {{ dump_file }}"
@@ -58,6 +60,9 @@
         - "echo -n '\n ############# IFCONFIG SETTINGS ##################### \n' >> {{ dump_file }}"
         - "echo -n '\nifconfig {{ dcos_nic }} : \n' >> {{ dump_file }}"
         - "ifconfig {{ dcos_nic }} >> {{ dump_file }}"
+        - "echo -n '\nifconfig -a (all NICs) : \n' >> {{ dump_file }}"
+        - "ifconfig -a >> {{ dump_file }}"
+
 
     - name: "sysctl -a output"
       shell: "{{ item }}"
