@@ -5,6 +5,11 @@
   vars:
   become: true
   tasks:
+    - name: "make softnet.sh for easier softnet evaluation"
+      template:
+        src: "templates/softnet.sh.j2"
+        dest: "/tmp/softnet.sh"
+        mode: 0644
 
     - name: "backup current /etc/systctl.conf"
       copy:
