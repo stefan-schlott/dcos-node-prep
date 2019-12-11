@@ -28,8 +28,12 @@ net.ipv4.tcp_tw_reuse = 1
 # Disable TCP slow start on idle connections
 net.ipv4.tcp_slow_start_after_idle = 0
 
-# make sure those Kernel defaults are configured again
+# make sure those Kernel defaults are configured again + sane good
+net.ipv4.ip_forward = 1
 net.ipv4.tcp_timestamps = 1
+net.ipv4.tcp_sack = 1
+net.ipv4.tcp_adv_win_scale = 1
+
 # TCP Keepalive (https://wiki.archlinux.org/index.php/sysctl)
 # Start the TCP keepalives after 15 seconds, do them every 15 seconds and treat the TCP connection as dead after 5 tries (5x15=75 seconds)
 net.ipv4.tcp_keepalive_time = 15
