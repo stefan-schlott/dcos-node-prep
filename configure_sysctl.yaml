@@ -1,6 +1,4 @@
 # Gathering facts from all hosts
-- hosts: "all"
-
 - hosts: "{{ host_group }}"
   vars:
   become: true
